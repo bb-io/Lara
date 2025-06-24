@@ -58,24 +58,43 @@ public class LaraClient : BlackBirdRestClient
         var date = DateTime.UtcNow.ToString("r");
         request.AddOrUpdateHeader("X-Lara-Date", date);
 
-        var bodyParam = request.Parameters
-            .FirstOrDefault(p => p.Type == ParameterType.RequestBody);
-        var contentType = bodyParam?.ContentType ?? "application/json";
-        request.AddOrUpdateHeader("Content-Type", contentType);
+        bool isMultipart = request.Files.Count > 0;
+        var bodyParam = request.Parameters.FirstOrDefault(p => p.Type == ParameterType.RequestBody);
 
-        string contentMd5 = string.Empty;
-        if (bodyParam?.Value is string bodyStr && bodyStr.Length > 0)
+        if (isMultipart)
         {
-            contentMd5 = ComputeMD5(bodyStr);
-            request.AddOrUpdateHeader("Content-MD5", contentMd5);
+            const string multipartCt = "multipart/form-data";
+            request.AddOrUpdateHeader("Content-Type", multipartCt);
+
+        }
+        else if (bodyParam is { Value: string bodyStr })
+        {
+            var contentType = bodyParam.ContentType ?? "application/json";
+            request.AddOrUpdateHeader("Content-Type", contentType);
+
+            if (!string.IsNullOrEmpty(bodyStr))
+            {
+                var contentMd5 = ComputeMD5(bodyStr);
+                request.AddOrUpdateHeader("Content-MD5", contentMd5);
+            }
+        }
+        else
+        {
+            request.AddOrUpdateHeader("Content-Type", "application/json");
         }
 
-        var path = request.Resource.StartsWith("/")
-            ? request.Resource
-            : "/" + request.Resource;
+        var finalContentType = request.Parameters
+            .FirstOrDefault(p => p.Name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
+            ?.Value?.ToString() ?? "";
+
+        var path = request.Resource.StartsWith("/") ? request.Resource : "/" + request.Resource;
         var method = request.Method.ToString().ToUpperInvariant();
-        var challenge = $"{method}\n{path}\n{contentMd5}\n{contentType}\n{date}";
+        var contentMd5Part = (!isMultipart && bodyParam is { Value: string })
+            ? ComputeMD5(bodyParam.Value.ToString())
+            : "";
+        var challenge = $"{method}\n{path}\n{contentMd5Part}\n{finalContentType}\n{date}";
         var signature = ComputeHmacSha256(challenge, _secret);
+
         request.AddOrUpdateHeader("Authorization", $"Lara {_accessKey}:{signature}");
     }
 

@@ -11,7 +11,7 @@ public class LanguageDataHandler(InvocationContext invocationContext) : Invocabl
     {
         var laraClient = new LaraClient(Creds);
         var request = new RestRequest("/languages", Method.Get);
-        var response= await laraClient.ExecuteWithErrorHandling<LanguageCodeResponse>(request);
+        var response = await laraClient.ExecuteWithErrorHandling<LanguageCodeResponse>(request);
 
         var codes = response.Content ?? new List<string>();
 

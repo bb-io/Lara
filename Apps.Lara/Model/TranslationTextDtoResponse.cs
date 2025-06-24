@@ -19,6 +19,7 @@ namespace Apps.Lara.Model
     public class TranslationContent
     {
         [JsonProperty("content_type")]
+        [Display("Content type")]
         public string ContentType { get; set; }
 
         [JsonProperty("source_language")]
