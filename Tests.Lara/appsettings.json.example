@@ -1,0 +1,7 @@
+{
+  "ConnectionDefinition": {
+    "accessKey": "",
+    "accessKeySecret": ""
+  },
+  "TestFolder": "TestFiles"
+}
