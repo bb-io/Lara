@@ -16,6 +16,7 @@ namespace Apps.Lara.Model
     public class MemoryItem
     {
         [JsonProperty("id")]
+        [Display("Memory ID")]
         public string Id { get; set; }
 
         [JsonProperty("secret")]

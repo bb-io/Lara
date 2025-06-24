@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Blackbird.Applications.Sdk.Common;
+using Newtonsoft.Json;
 
 namespace Apps.Lara.Model
 {
@@ -11,6 +12,7 @@ namespace Apps.Lara.Model
     public class OperationContent
     {
         [JsonProperty("id")]
+        [Display("Translation memory ID")]
         public string Id { get; set; }
 
         [JsonProperty("begin")]

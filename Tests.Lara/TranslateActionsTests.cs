@@ -99,7 +99,7 @@ public class TranslateActionsTests : TestBase
         var action = new TranslateActions(InvocationContext, FileManager);
 
         var memory = new MemoryRequest { MemoryId = "mem_1Xg3fQLOiUjIfnlWKrTH2A" };
-        var translation = new ImportMemoryRequest { File = new FileReference { Name = "test.tmx" }, Compression = "gzip" };
+        var translation = new ImportMemoryRequest { File = new FileReference { Name = "test.tmx" } };
 
         var response = await action.ImportMemory(memory, translation);
 

@@ -7,7 +7,5 @@ namespace Apps.Lara.Model
     {
         [Display("TMX file")]
         public FileReference File { get; set; }
-
-        public string Compression { get; set; }
     }
 }
