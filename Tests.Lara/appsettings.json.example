@@ -1,6 +1,7 @@
 {
   "ConnectionDefinition": {
-    "token": ""
+    "accessKey": "",
+    "accessKeySecret": ""
   },
   "TestFolder": "TestFiles"
 }

@@ -1,8 +1,8 @@
-﻿using Apps.Appname.Constants;
+﻿using Apps.Lara.Constants;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Connections;
 
-namespace Apps.Appname.Connections;
+namespace Apps.Lara.Connections;
 
 public class ConnectionDefinition : IConnectionDefinition
 {
@@ -14,7 +14,8 @@ public class ConnectionDefinition : IConnectionDefinition
             AuthenticationType = ConnectionAuthenticationType.Undefined,
             ConnectionProperties = new List<ConnectionProperty>
             {
-                new(CredsNames.Token) { DisplayName = "API Token", Sensitive = true}
+                new(CredsNames.AccessKey) { DisplayName = "Access key", Sensitive = true},
+                new(CredsNames.AccessKeySecret) { DisplayName = "Access key secret", Sensitive = true }
             }
         }
     };

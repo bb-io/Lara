@@ -1,11 +1,11 @@
-﻿using Apps.Appname.Api;
+﻿using Apps.Lara.Api;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Connections;
 using RestSharp;
 
-namespace Apps.Appname.Connections;
+namespace Apps.Lara.Connections;
 
-public class ConnectionValidator: IConnectionValidator
+public class ConnectionValidator : IConnectionValidator
 {
     public async ValueTask<ConnectionValidationResponse> ValidateConnection(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
@@ -13,15 +13,16 @@ public class ConnectionValidator: IConnectionValidator
     {
         try
         {
-            var client = new Client(authenticationCredentialsProviders);
-
-            await client.ExecuteWithErrorHandling(new RestRequest());
+            var client = new LaraClient(authenticationCredentialsProviders);
+            var request = new RestRequest("/languages", Method.Get); 
+            await client.ExecuteWithErrorHandling(request);
 
             return new()
             {
                 IsValid = true
             };
-        } catch(Exception ex)
+        }
+        catch (Exception ex)
         {
             return new()
             {
