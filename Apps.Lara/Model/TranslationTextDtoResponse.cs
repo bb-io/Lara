@@ -8,6 +8,7 @@ namespace Apps.Lara.Model
         public TranslationContent Translation { get; set; }
     }
 
+   
     public class TranslationTextDtoResponse
     {
         [JsonProperty("status")]
@@ -28,5 +29,37 @@ namespace Apps.Lara.Model
 
         [JsonProperty("translation")]
         public string Translation { get; set; }
+    }
+
+
+    public class TranslationTextsResponse
+    {
+        [JsonProperty("content")]
+        public TranslationContents Translation { get; set; }
+    }
+
+    public class TranslationContents
+    {
+        [JsonProperty("content_type")]
+        [Display("Content type")]
+        public string ContentType { get; set; }
+
+        [JsonProperty("source_language")]
+        [Display("Source language")]
+        public string SourceLanguage { get; set; }
+
+        [JsonProperty("translation")]
+        public List<TranslationSegment> Translation { get; set; }
+    }
+
+    public class TranslationSegment
+    {
+
+        [JsonProperty("text")]
+        public string Text { get; set; }
+
+
+        [JsonProperty("translatable")]
+        public bool Translatable { get; set; }
     }
 }
