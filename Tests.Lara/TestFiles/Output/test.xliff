@@ -44,7 +44,7 @@
     <unit id="u4" name="/xliff[1]/file[1]/body[1]/trans-unit[2]/g[1]/g[1]" p3:tagHandling="html" xmlns:p3="http://blackbird.io/">
       <segment state="translated">
         <source>pilastro 3a</source>
-        <target>Pilar 3a</target>
+        <target>pilar 3a</target>
       </segment>
     </unit>
     <unit id="u5" name="/xliff[1]/file[1]/body[1]/trans-unit[2]/g[1]/#text[2]" p3:tagHandling="html" xmlns:p3="http://blackbird.io/">

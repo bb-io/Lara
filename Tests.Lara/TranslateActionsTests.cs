@@ -33,23 +33,19 @@ public class TranslateActionsTests : TestBase
     }
 
     [TestMethod]
-    public async Task TranslateFileBlacklake_IsSuccessful()
+    public async Task TranslateFile_IsSuccessful()
     {
         var action = new TranslateActions(InvocationContext, FileManager);
-
-        var languageRequest = new LanguageRequest
-        {
-            TargetLanguage = "es",
-            SourceLanguage = "en"
-        };
 
         var textRequest = new TranslateFileRequest
         {
             File = new FileReference { Name = "test.xliff" },
             Instructions = "Translate as much friendly as possible",
+            TargetLanguage = "es",
+            MemoryId= "mem_17PV2mXVbF6J69A2fjWZaq"
         };
 
-        var response = await action.TranslateFileBlacklake(languageRequest, textRequest);
+        var response = await action.TranslateFile( textRequest);
 
         var json = System.Text.Json.JsonSerializer.Serialize(response, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
         Console.WriteLine(json);

@@ -13,8 +13,8 @@ using Blackbird.Filters.Xliff.Xliff2;
 using RestSharp;
 using System.IO.Compression;
 using System.Text;
-using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.SDK.Blueprints;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Apps.Lara.Actions;
 
@@ -44,6 +44,9 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
         if (!string.IsNullOrWhiteSpace(text.Priority))
             body["priority"] = text.Priority!;
 
+        if (!string.IsNullOrWhiteSpace(text.MemoryId))
+            body["adapt_to"] = new[] { text.MemoryId };
+
         request.AddJsonBody(body);
 
         var response = await client.ExecuteWithErrorHandling<TranslationTextDtoResponse>(request);
@@ -56,7 +59,7 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
 
     [BlueprintActionDefinition(BlueprintAction.TranslateFile)]
     [Action("Translate file", Description = "Translates file")]
-    public async Task<FileResponse> TranslateFileBlacklake([ActionParameter] LanguageRequest language, [ActionParameter] TranslateFileRequest file)
+    public async Task<FileResponse> TranslateFile([ActionParameter] TranslateFileRequest file)
     {
       
         var stream = await fileManagementClient.DownloadAsync(file.File);
@@ -73,17 +76,18 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
         var body = new Dictionary<string, object>
         {
             ["q"] = textBlocks,
-            ["target"] = language.TargetLanguage,
+            ["target"] = file.TargetLanguage,
             ["content_type"] = detectedContentType
         };
 
-        if (!string.IsNullOrWhiteSpace(language.SourceLanguage))
-            body["source"] = language.SourceLanguage;
+        if (!string.IsNullOrWhiteSpace(file.SourceLanguage))
+            body["source"] = file.SourceLanguage;
         if (!string.IsNullOrWhiteSpace(file.Instructions))
             body["instructions"] = new[] { file.Instructions };
         if (!string.IsNullOrWhiteSpace(file.Priority))
             body["priority"] = file.Priority;
-
+        if (!string.IsNullOrWhiteSpace(file.MemoryId))
+            body["adapt_to"] = new[] { file.MemoryId };
 
         var request = new RestRequest("/translate", Method.Post)
             .AddJsonBody(body);

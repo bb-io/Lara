@@ -21,5 +21,9 @@
         <PackageReference Include="Blackbird.Applications.Sdk.Utils" Version="1.0.25" />
         <PackageReference Include="Blackbird.Filters" Version="1.1.4" />
     </ItemGroup>
+	
+    <ItemGroup>
+      <Folder Include="Polling\Model\" />
+    </ItemGroup>
 
 </Project>
