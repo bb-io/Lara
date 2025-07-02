@@ -23,7 +23,7 @@ public class TranslateActionsTests : TestBase
         {
             Text = "Hello, how are you?",
             ContentType = "text/plain",
-            Instructions = ["Translate as much friendly as possible"],
+            Instructions = "Translate as much friendly as possible",
         };
 
         var response = await action.TranslateText(languageRequest, textRequest);
@@ -31,30 +31,6 @@ public class TranslateActionsTests : TestBase
         var json = System.Text.Json.JsonSerializer.Serialize(response, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
         Console.WriteLine(json);
     }
-
-    [TestMethod]
-    public async Task TranslateFile_IsSuccessful()
-    {
-        var action = new TranslateActions(InvocationContext, FileManager);
-
-        var languageRequest = new LanguageRequest
-        {
-            TargetLanguage = "es",
-            SourceLanguage = "en"
-        };
-
-        var textRequest = new TranslateFileRequest
-        {
-            File = new FileReference { Name= "test.html" },
-            Instructions = ["Translate as much friendly as possible"],
-        };
-
-        var response = await action.TranslateFile(languageRequest, textRequest);
-
-        var json = System.Text.Json.JsonSerializer.Serialize(response, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-        Console.WriteLine(json);
-    }
-
 
     [TestMethod]
     public async Task TranslateFileBlacklake_IsSuccessful()
@@ -69,8 +45,8 @@ public class TranslateActionsTests : TestBase
 
         var textRequest = new TranslateFileRequest
         {
-            File = new FileReference { Name = "test.html" },
-            Instructions = ["Translate as much friendly as possible"],
+            File = new FileReference { Name = "test.xliff" },
+            Instructions = "Translate as much friendly as possible",
         };
 
         var response = await action.TranslateFileBlacklake(languageRequest, textRequest);

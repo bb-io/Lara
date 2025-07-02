@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file original="test.html" source-language="it-IT" target-language="en" datatype="html">
+    <body>
+      <trans-unit id="1" slug="simple_text">
+        <source>Benvenuti nel nostro sito web!</source>
+        <target></target>
+      </trans-unit>
+      <trans-unit id="2" slug="text_with_tags">
+        <source>
+          <g id="1" ctype="x-p">Scopri il <g id="2" ctype="x-span" style="color:blue">pilastro 3a</g> per risparmiare sulle imposte.</g>
+        </source>
+        <target></target>
+      </trans-unit>
+      <trans-unit id="3" slug="text_with_number">
+        <source>
+          Importo massimo: <g id="1" ctype="x-span" class="amount">7’258 CHF</g>
+        </source>
+        <target></target>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

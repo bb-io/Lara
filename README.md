@@ -27,6 +27,7 @@ You can sign up for a free account at [Lara](https://app.laratranslate.com). 'Ac
 ### Translation
 
 - **Translate text**  Translates a text string
+- **Translate file**  Translates a file (supports .xliff and .html formats)
 - **Add translation to memory**  Adds a translation to the memory
 - **Delete translation from memory**  Deletes a translation from the memory
 - **Create memory**  Creates a new memory

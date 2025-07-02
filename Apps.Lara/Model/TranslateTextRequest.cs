@@ -14,7 +14,7 @@ namespace Apps.Lara.Model
         public string? ContentType { get; set; }
 
         [Display("Instructions to customize")]
-        public IEnumerable<string?> Instructions { get; set; }
+        public string? Instructions { get; set; }
 
         [Display("Priority")]
         [StaticDataSource(typeof(PriorityDataHandler))]

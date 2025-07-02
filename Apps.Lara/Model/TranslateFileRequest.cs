@@ -10,12 +10,8 @@ namespace Apps.Lara.Model
         [Display("File for translation")]
         public FileReference File { get; set; }
 
-        //[Display("Content type")]
-        //[StaticDataSource(typeof(ContentTypeDataHandler))]
-        //public string? ContentType { get; set; }
-
         [Display("Instructions to customize")]
-        public IEnumerable<string?> Instructions { get; set; }
+        public string? Instructions { get; set; }
 
         [Display("Priority")]
         [StaticDataSource(typeof(PriorityDataHandler))]

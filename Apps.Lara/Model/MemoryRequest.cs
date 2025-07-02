@@ -9,6 +9,5 @@ namespace Apps.Lara.Model
         [Display("Memory ID")]
         [DataSource(typeof(MemoriesDataHandler))]
         public string MemoryId { get; set; }
-
     }
 }
