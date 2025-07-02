@@ -1,4 +1,5 @@
 using Apps.Lara.Constants;
+using Apps.Lara.Model;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Utils.RestSharp;
@@ -49,8 +50,12 @@ public class LaraClient : BlackBirdRestClient
 
     protected override Exception ConfigureErrorException(RestResponse response)
     {
-        var error = JsonConvert.DeserializeObject(response.Content);
-        throw new PluginApplicationException(error.ToString());
+        var error = JsonConvert.DeserializeObject<ErrorResponse>(response.Content);
+        if (error?.Error.Message != null)
+        {
+            return new PluginApplicationException(error.Error.Message);
+        }
+        return new PluginApplicationException(response.ErrorMessage ?? response.ErrorException?.Message ?? response.Content);
     }
 
     private void SignRequest(RestRequest request)

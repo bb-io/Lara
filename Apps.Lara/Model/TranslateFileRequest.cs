@@ -4,6 +4,7 @@ using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dictionaries;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Files;
+using Blackbird.Applications.SDK.Blueprints.Handlers;
 using Blackbird.Applications.SDK.Blueprints.Interfaces.Translate;
 
 
@@ -11,7 +12,7 @@ namespace Apps.Lara.Model
 {
     public class TranslateFileRequest : ITranslateFileInput
     {
-        [Display("File for translation")]
+        [Display("File")]
         public FileReference File { get; set; }
 
         [Display("Glossary")]
@@ -36,9 +37,7 @@ namespace Apps.Lara.Model
         [DataSource(typeof(MemoriesDataHandler))]
         public string? MemoryId { get; set; }
 
-
-        //
-        [DefinitionIgnore]
+        [Display("Output file handling", Description = "Determine the format of the output file. The default Blackbird behavior is to convert to XLIFF for future steps."), StaticDataSource(typeof(ProcessFileFormatHandler))]
         public string? OutputFileHandling { get; set; }
     }
 }

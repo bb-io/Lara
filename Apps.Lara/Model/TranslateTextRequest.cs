@@ -3,13 +3,22 @@ using Apps.Lara.Handlers.Static;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dictionaries;
 using Blackbird.Applications.Sdk.Common.Dynamic;
+using Blackbird.Applications.SDK.Blueprints.Interfaces.Translate;
 
 namespace Apps.Lara.Model
 {
-    public class TranslateTextRequest
+    public class TranslateTextRequest : ITranslateTextInput
     {
-        [Display("Text to translate")]
+        [Display("Text")]
         public string Text { get; set; }
+
+        [Display("Source language")]
+        [DataSource(typeof(LanguageDataHandler))]
+        public string? SourceLanguage { get; set; }
+
+        [Display("Target language")]
+        [DataSource(typeof(LanguageDataHandler))]
+        public string TargetLanguage { get; set; }
 
         [Display("Content type")]
         [StaticDataSource(typeof(ContentTypeDataHandler))]
@@ -25,5 +34,7 @@ namespace Apps.Lara.Model
         [Display("Translation memory ID")]
         [DataSource(typeof(MemoriesDataHandler))]
         public string? MemoryId { get; set; }
+
+
     }
 }
