@@ -1,14 +1,9 @@
 ﻿using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.SDK.Blueprints.Interfaces.Translate;
 using Newtonsoft.Json;
 
 namespace Apps.Lara.Model
-{
-    public class TranslationTextResponse
-    {
-        public TranslationContent Translation { get; set; }
-    }
-
-   
+{   
     public class TranslationTextDtoResponse
     {
         [JsonProperty("status")]
@@ -17,7 +12,7 @@ namespace Apps.Lara.Model
         [JsonProperty("content")]
         public TranslationContent Content { get; set; }
     }
-    public class TranslationContent
+    public class TranslationContent : ITranslateTextOutput
     {
         [JsonProperty("content_type")]
         [Display("Content type")]
@@ -27,8 +22,9 @@ namespace Apps.Lara.Model
         [Display("Source language")]
         public string SourceLanguage { get; set; }
 
+        [Display("Translated text")]
         [JsonProperty("translation")]
-        public string Translation { get; set; }
+        public string TranslatedText { get; set; }
     }
 
 

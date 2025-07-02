@@ -9,12 +9,9 @@ using Blackbird.Filters.Coders;
 using Blackbird.Filters.Enums;
 using Blackbird.Filters.Extensions;
 using Blackbird.Filters.Transformations;
-using Blackbird.Filters.Xliff.Xliff2;
 using RestSharp;
 using System.IO.Compression;
 using System.Text;
-using Blackbird.Applications.SDK.Blueprints;
-using static System.Net.Mime.MediaTypeNames;
 using Blackbird.Applications.Sdk.Common.Files;
 using System.Text.RegularExpressions;
 using Blackbird.Applications.Sdk.Glossaries.Utils.Converters;
@@ -26,118 +23,106 @@ namespace Apps.Lara.Actions;
 public class TranslateActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : Invocable(invocationContext)
 {
     [Action("Translate text", Description = "Translates text")]
-    public async Task<TranslationTextResponse> TranslateText([ActionParameter] LanguageRequest language, [ActionParameter] TranslateTextRequest text)
+    public async Task<TranslationContent> TranslateText([ActionParameter] TranslateTextRequest input)
     {
         var client = new LaraClient(Creds);
         var request = new RestRequest("/translate", Method.Post);
         var body = new Dictionary<string, object>
         {
-            ["target"] = language.TargetLanguage!,
-            ["q"] = text.Text
+            ["target"] = input.TargetLanguage!,
+            ["q"] = input.Text
         };
 
-        if (!string.IsNullOrWhiteSpace(language.SourceLanguage))
-            body["source"] = language.SourceLanguage!;
+        if (!string.IsNullOrWhiteSpace(input.SourceLanguage))
+            body["source"] = input.SourceLanguage!;
 
-        if (!string.IsNullOrWhiteSpace(text.ContentType))
-            body["content_type"] = text.ContentType!;
+        if (!string.IsNullOrWhiteSpace(input.ContentType))
+            body["content_type"] = input.ContentType!;
 
-        if (!string.IsNullOrWhiteSpace(text.Instructions))
-            body["instructions"] = new[] { text.Instructions! };
+        if (!string.IsNullOrWhiteSpace(input.Instructions))
+            body["instructions"] = new[] { input.Instructions! };
 
-        if (!string.IsNullOrWhiteSpace(text.Priority))
-            body["priority"] = text.Priority!;
+        if (!string.IsNullOrWhiteSpace(input.Priority))
+            body["priority"] = input.Priority!;
 
-        if (!string.IsNullOrWhiteSpace(text.MemoryId))
-            body["adapt_to"] = new[] { text.MemoryId };
+        if (!string.IsNullOrWhiteSpace(input.MemoryId))
+            body["adapt_to"] = new[] { input.MemoryId };
 
         request.AddJsonBody(body);
 
         var response = await client.ExecuteWithErrorHandling<TranslationTextDtoResponse>(request);
 
-        return new TranslationTextResponse
-        {
-            Translation = response.Content
-        };
+        return response.Content;
     }
 
-    [BlueprintActionDefinition(BlueprintAction.TranslateFile)]
-    [Action("Translate file", Description = "Translates file")]
+    [Action("Translate", Description = "Translates file")]
     public async Task<FileResponse> TranslateFile([ActionParameter] TranslateFileRequest file)
     {
         using var fileStream = await fileManagementClient.DownloadAsync(file.File);
         var content = await Transformation.Parse(fileStream);
-
-        var segments = content.GetSegments()
-            .Where(s => !s.IsIgnorbale && s.IsInitial)
-            .ToList();
-        if (!segments.Any())
-            throw new PluginMisconfigurationException("No segments found to translate.");
-
-        var blocks = segments
-            .Select(s => new { text = s.GetSource(), translatable = true })
-            .ToArray();
-
-        var contentType = DetectContentType(file.File.Name);
-
-        var body = new Dictionary<string, object>
+        
+        async Task<IEnumerable<TranslationSegment>> BatchTranslate(IEnumerable<Segment> batch)
         {
-            ["q"] = blocks,
-            ["target"] = file.TargetLanguage,
-            ["content_type"] = contentType
-        };
-        if (!string.IsNullOrWhiteSpace(file.SourceLanguage))
-            body["source"] = file.SourceLanguage;
-        if (!string.IsNullOrWhiteSpace(file.Priority))
-            body["priority"] = file.Priority;
-        if (!string.IsNullOrWhiteSpace(file.MemoryId))
-            body["adapt_to"] = new[] { file.MemoryId };
+            var instructionsList = new List<string>();
+            if (file.GlossaryFile != null)
+            {
+                var allText = string.Join(" ", batch.Select(s => s.GetSource()));
+                var glossaryPrompt = await GetGlossaryPromptPart(file.GlossaryFile, allText, filter: false);
+                if (!string.IsNullOrWhiteSpace(glossaryPrompt))
+                    instructionsList.Add(glossaryPrompt);
+            }
+            if (!string.IsNullOrWhiteSpace(file.Instructions))
+                instructionsList.Add(file.Instructions);
 
-        var instructionsList = new List<string>();
-        if (file.GlossaryFile != null)
-        {
-            var allText = string.Join(" ", segments.Select(s => s.GetSource()));
-            var glossaryPrompt = await GetGlossaryPromptPart(file.GlossaryFile, allText, filter: false);
-            if (!string.IsNullOrWhiteSpace(glossaryPrompt))
-                instructionsList.Add(glossaryPrompt);
-        }
-        if (!string.IsNullOrWhiteSpace(file.Instructions))
-            instructionsList.Add(file.Instructions);
-        if (instructionsList.Any())
-            body["instructions"] = instructionsList.ToArray();
+            var blocks = batch
+                .Select(s => new { text = s.GetSource(), translatable = true })
+                .ToArray();
 
-        var request = new RestRequest("/translate", Method.Post)
-            .AddJsonBody(body);
-        var response = await Client.ExecuteWithErrorHandling<TranslationTextsResponse>(request);
+            var body = new Dictionary<string, object>
+            {
+                ["target"] = file.TargetLanguage,
+                ["q"] = blocks
+            };
 
-        var translated = response.Translation.Translation;
-        if (translated == null || !translated.Any())
-            throw new PluginMisconfigurationException("No translated segments received from the server.");
+            if (!string.IsNullOrWhiteSpace(file.SourceLanguage))
+                body["source"] = file.SourceLanguage;
+            if (!string.IsNullOrWhiteSpace(file.Priority))
+                body["priority"] = file.Priority;
+            if (!string.IsNullOrWhiteSpace(file.MemoryId))
+                body["adapt_to"] = new[] { file.MemoryId };
+            if(instructionsList.Any())
+                body["instructions"] = instructionsList.ToArray();
 
-        for (int i = 0; i < segments.Count; i++)
-        {
-            segments[i].SetTarget(translated[i].Text);
-            segments[i].State = SegmentState.Translated;
+            var request = new RestRequest("/translate", Method.Post).AddJsonBody(body);
+            var response = await Client.ExecuteWithErrorHandling<TranslationTextsResponse>(request);
+
+            return response.Translation.Translation;
         }
 
-        Stream resultStream;
-        string resultName = file.File.Name;
-        if (contentType.Equals("application/xliff+xml", StringComparison.OrdinalIgnoreCase))
+        var segmentTranslations = await content
+            .GetSegments()
+            .Where(x => !x.IsIgnorbale && x.IsInitial)
+            .Batch(100).Process(BatchTranslate);
+
+        foreach (var (segment, translation) in segmentTranslations)
         {
-            resultStream = content.Serialize().ToStream();
-            resultName = Path.ChangeExtension(file.File.Name, ".xliff");
+            segment.SetTarget(translation.Text);
+            segment.State = SegmentState.Translated;
         }
-        else if (contentType.Equals("text/html", StringComparison.OrdinalIgnoreCase))
+
+        if (file.OutputFileHandling == null || file.OutputFileHandling == "xliff")
         {
-            resultStream = HtmlContentCoder.Serialize(content.Target()).ToStream();
+            var xliffStream = content.Serialize().ToStream();
+            var fileName = file.File.Name.EndsWith("xliff") || file.File.Name.EndsWith("xlf") ? file.File.Name : file.File.Name + ".xliff";
+            var uploadedFile = await fileManagementClient.UploadAsync(xliffStream, "application/xliff+xml", fileName);
+            return new FileResponse { File = uploadedFile };
         }
         else
         {
-            resultStream = content.Target().Serialize().ToStream();
+            var resultStream = content.Target().Serialize().ToStream();
+            var uploadedFile = await fileManagementClient.UploadAsync(resultStream, file.File.ContentType, file.File.Name);
+            return new FileResponse { File = uploadedFile };
         }
-
-        var uploaded = await fileManagementClient.UploadAsync(resultStream, contentType, resultName);
-        return new FileResponse { File = uploaded };
     }
 
 
