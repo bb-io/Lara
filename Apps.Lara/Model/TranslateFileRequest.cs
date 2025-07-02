@@ -2,10 +2,12 @@
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dictionaries;
 using Blackbird.Applications.Sdk.Common.Files;
+using Blackbird.Applications.SDK.Blueprints.Interfaces.Translate;
+
 
 namespace Apps.Lara.Model
 {
-    public class TranslateFileRequest
+    public class TranslateFileRequest 
     {
         [Display("File for translation")]
         public FileReference File { get; set; }

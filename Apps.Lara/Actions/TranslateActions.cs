@@ -13,6 +13,8 @@ using Blackbird.Filters.Xliff.Xliff2;
 using RestSharp;
 using System.IO.Compression;
 using System.Text;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using Blackbird.Applications.SDK.Blueprints;
 
 namespace Apps.Lara.Actions;
 
@@ -52,7 +54,7 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
         };
     }
 
-
+    [BlueprintActionDefinition(BlueprintAction.TranslateFile)]
     [Action("Translate file", Description = "Translates file")]
     public async Task<FileResponse> TranslateFileBlacklake([ActionParameter] LanguageRequest language, [ActionParameter] TranslateFileRequest file)
     {
