@@ -15,6 +15,10 @@ using System.IO.Compression;
 using System.Text;
 using Blackbird.Applications.SDK.Blueprints;
 using static System.Net.Mime.MediaTypeNames;
+using Blackbird.Applications.Sdk.Common.Files;
+using System.Text.RegularExpressions;
+using Blackbird.Applications.Sdk.Glossaries.Utils.Converters;
+using System.Net.Mime;
 
 namespace Apps.Lara.Actions;
 
@@ -61,68 +65,79 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
     [Action("Translate file", Description = "Translates file")]
     public async Task<FileResponse> TranslateFile([ActionParameter] TranslateFileRequest file)
     {
-      
-        var stream = await fileManagementClient.DownloadAsync(file.File);
-        var content = await Transformation.Parse(stream);
+        using var fileStream = await fileManagementClient.DownloadAsync(file.File);
+        var content = await Transformation.Parse(fileStream);
 
-        var segments = content.GetSegments().Where(s => !s.IsIgnorbale && s.IsInitial).ToList();
-
+        var segments = content.GetSegments()
+            .Where(s => !s.IsIgnorbale && s.IsInitial)
+            .ToList();
         if (!segments.Any())
-            throw new PluginMisconfigurationException("No segments found in the file.");
+            throw new PluginMisconfigurationException("No segments found to translate.");
 
-        var textBlocks = segments.Select(s => new { text = s.GetSource(), translatable = true }).ToArray();
-        string detectedContentType = DetectContentType(file.File.Name);
+        var blocks = segments
+            .Select(s => new { text = s.GetSource(), translatable = true })
+            .ToArray();
+
+        var contentType = DetectContentType(file.File.Name);
 
         var body = new Dictionary<string, object>
         {
-            ["q"] = textBlocks,
+            ["q"] = blocks,
             ["target"] = file.TargetLanguage,
-            ["content_type"] = detectedContentType
+            ["content_type"] = contentType
         };
-
         if (!string.IsNullOrWhiteSpace(file.SourceLanguage))
             body["source"] = file.SourceLanguage;
-        if (!string.IsNullOrWhiteSpace(file.Instructions))
-            body["instructions"] = new[] { file.Instructions };
         if (!string.IsNullOrWhiteSpace(file.Priority))
             body["priority"] = file.Priority;
         if (!string.IsNullOrWhiteSpace(file.MemoryId))
             body["adapt_to"] = new[] { file.MemoryId };
 
+        var instructionsList = new List<string>();
+        if (file.GlossaryFile != null)
+        {
+            var allText = string.Join(" ", segments.Select(s => s.GetSource()));
+            var glossaryPrompt = await GetGlossaryPromptPart(file.GlossaryFile, allText, filter: false);
+            if (!string.IsNullOrWhiteSpace(glossaryPrompt))
+                instructionsList.Add(glossaryPrompt);
+        }
+        if (!string.IsNullOrWhiteSpace(file.Instructions))
+            instructionsList.Add(file.Instructions);
+        if (instructionsList.Any())
+            body["instructions"] = instructionsList.ToArray();
+
         var request = new RestRequest("/translate", Method.Post)
             .AddJsonBody(body);
         var response = await Client.ExecuteWithErrorHandling<TranslationTextsResponse>(request);
 
-        var translatedSegments = response.Translation?.Translation;
-        if (translatedSegments == null || !translatedSegments.Any())
+        var translated = response.Translation.Translation;
+        if (translated == null || !translated.Any())
             throw new PluginMisconfigurationException("No translated segments received from the server.");
 
         for (int i = 0; i < segments.Count; i++)
         {
-            segments[i].SetTarget(translatedSegments[i].Text);
+            segments[i].SetTarget(translated[i].Text);
             segments[i].State = SegmentState.Translated;
         }
 
-        Stream outputStream;
-        string fileName = file.File.Name;
-
-        if (detectedContentType.Equals("application/xliff+xml", StringComparison.OrdinalIgnoreCase))
+        Stream resultStream;
+        string resultName = file.File.Name;
+        if (contentType.Equals("application/xliff+xml", StringComparison.OrdinalIgnoreCase))
         {
-            outputStream = content.Serialize().ToStream();
-            fileName = Path.ChangeExtension(file.File.Name, ".xliff");
+            resultStream = content.Serialize().ToStream();
+            resultName = Path.ChangeExtension(file.File.Name, ".xliff");
+        }
+        else if (contentType.Equals("text/html", StringComparison.OrdinalIgnoreCase))
+        {
+            resultStream = HtmlContentCoder.Serialize(content.Target()).ToStream();
         }
         else
         {
-            outputStream = content.Target().Serialize().ToStream();
+            resultStream = content.Target().Serialize().ToStream();
         }
 
-        var uploadedFile = await fileManagementClient.UploadAsync(
-            outputStream, detectedContentType, fileName);
-
-        return new FileResponse
-        {
-            File = uploadedFile
-        };
+        var uploaded = await fileManagementClient.UploadAsync(resultStream, contentType, resultName);
+        return new FileResponse { File = uploaded };
     }
 
 
@@ -271,7 +286,6 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
         return await client.ExecuteWithErrorHandling<MemoryTranslationResponse>(request);
     }
 
-
     private string DetectContentType(string fileName)
     {
         var ext = Path.GetExtension(fileName)?.ToLowerInvariant();
@@ -281,5 +295,43 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
             ".xlf" or ".xliff" => "application/xliff+xml",
             _ => "text/plain"
         };
+    }
+
+
+    protected async Task<string> GetGlossaryPromptPart(FileReference glossary, string sourceContent, bool filter)
+    {
+        if (!glossary.Name.EndsWith(".tbx", StringComparison.OrdinalIgnoreCase))
+        {
+            var extension = Path.GetExtension(glossary.Name);
+            throw new PluginMisconfigurationException($"Glossary file must be in TBX format. But the provided file has {extension} extension.");
+        }
+
+        var glossaryStream = await fileManagementClient.DownloadAsync(glossary);
+        var blackbirdGlossary = await glossaryStream.ConvertFromTbx();
+
+        var glossaryPromptPart = new StringBuilder();
+        glossaryPromptPart.AppendLine();
+        glossaryPromptPart.AppendLine();
+        glossaryPromptPart.AppendLine("Glossary entries (each entry includes terms in different language. Each " +
+                                      "language may have a few synonymous variations which are separated by ;;):");
+
+        var entriesIncluded = false;
+        foreach (var entry in blackbirdGlossary.ConceptEntries)
+        {
+            var allTerms = entry.LanguageSections.SelectMany(x => x.Terms.Select(y => y.Term));
+            if (filter && !allTerms.Any(x => Regex.IsMatch(sourceContent, $@"\b{x}\b", RegexOptions.IgnoreCase))) continue;
+            entriesIncluded = true;
+
+            glossaryPromptPart.AppendLine();
+            glossaryPromptPart.AppendLine("\tEntry:");
+
+            foreach (var section in entry.LanguageSections)
+            {
+                glossaryPromptPart.AppendLine(
+                    $"\t\t{section.LanguageCode}: {string.Join(";; ", section.Terms.Select(term => term.Term))}");
+            }
+        }
+
+        return entriesIncluded ? glossaryPromptPart.ToString() : null;
     }
 }

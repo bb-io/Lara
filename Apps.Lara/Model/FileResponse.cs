@@ -4,7 +4,7 @@ using Blackbird.Applications.SDK.Blueprints.Interfaces.Translate;
 
 namespace Apps.Lara.Model
 {
-    public class FileResponse 
+    public class FileResponse : ITranslateFileOutput
     {
         [Display("Translated file")]
         public FileReference File { get; set; }

@@ -9,10 +9,13 @@ using Blackbird.Applications.SDK.Blueprints.Interfaces.Translate;
 
 namespace Apps.Lara.Model
 {
-    public class TranslateFileRequest
+    public class TranslateFileRequest : ITranslateFileInput
     {
         [Display("File for translation")]
         public FileReference File { get; set; }
+
+        [Display("Glossary")]
+        public FileReference? GlossaryFile { get; set; }
 
         [Display("Instructions to customize")]
         public string? Instructions { get; set; }
@@ -34,6 +37,8 @@ namespace Apps.Lara.Model
         public string? MemoryId { get; set; }
 
 
-       
+        //
+        [DefinitionIgnore]
+        public string? OutputFileHandling { get; set; }
     }
 }

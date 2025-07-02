@@ -1,0 +1,69 @@
+<xliff version="2.2" xmlns="urn:oasis:names:tc:xliff:document:2.2">
+  <file id="f1">
+    <skeleton>﻿&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2"&gt;
+  &lt;file original="test.html" source-language="it-IT" target-language="en" datatype="html"&gt;
+    &lt;body&gt;
+      &lt;trans-unit id="1" slug="simple_text"&gt;
+        &lt;source&gt;Benvenuti nel nostro sito web!&lt;/source&gt;
+        &lt;target&gt;&lt;/target&gt;
+      &lt;/trans-unit&gt;
+      &lt;trans-unit id="2" slug="text_with_tags"&gt;
+        &lt;source&gt;
+          &lt;g id="1" ctype="x-p"&gt;Scopri il &lt;g id="2" ctype="x-span" style="color:blue"&gt;pilastro 3a&lt;/g&gt; per risparmiare sulle imposte.&lt;/g&gt;
+        &lt;/source&gt;
+        &lt;target&gt;&lt;/target&gt;
+      &lt;/trans-unit&gt;
+      &lt;trans-unit id="3" slug="text_with_number"&gt;
+        &lt;source&gt;
+          Importo massimo: &lt;g id="1" ctype="x-span" class="amount"&gt;7’258 CHF&lt;/g&gt;
+        &lt;/source&gt;
+        &lt;target&gt;&lt;/target&gt;
+      &lt;/trans-unit&gt;
+    &lt;/body&gt;
+  &lt;/file&gt;
+&lt;/xliff&gt;</skeleton>
+    <unit id="u1" name="/#text[1]" p3:tagHandling="html" xmlns:p3="http://blackbird.io/">
+      <segment state="translated">
+        <source>﻿</source>
+        <target>﻿</target>
+      </segment>
+    </unit>
+    <unit id="u2" name="/xliff[1]/file[1]/body[1]/trans-unit[1]/#text[2]" p3:tagHandling="html" xmlns:p3="http://blackbird.io/">
+      <segment state="translated">
+        <source>Benvenuti nel nostro sito web!</source>
+        <target>¡Bienvenidos a nuestra página web!</target>
+      </segment>
+    </unit>
+    <unit id="u3" name="/xliff[1]/file[1]/body[1]/trans-unit[2]/g[1]/#text[1]" p3:tagHandling="html" xmlns:p3="http://blackbird.io/">
+      <segment state="translated">
+        <source>Scopri il</source>
+        <target>Descubre el</target>
+      </segment>
+    </unit>
+    <unit id="u4" name="/xliff[1]/file[1]/body[1]/trans-unit[2]/g[1]/g[1]" p3:tagHandling="html" xmlns:p3="http://blackbird.io/">
+      <segment state="translated">
+        <source>pilastro 3a</source>
+        <target>pilar 3a</target>
+      </segment>
+    </unit>
+    <unit id="u5" name="/xliff[1]/file[1]/body[1]/trans-unit[2]/g[1]/#text[2]" p3:tagHandling="html" xmlns:p3="http://blackbird.io/">
+      <segment state="translated">
+        <source>per risparmiare sulle imposte.</source>
+        <target>para ahorrar en impuestos.</target>
+      </segment>
+    </unit>
+    <unit id="u6" name="/xliff[1]/file[1]/body[1]/trans-unit[3]/#text[2]" p3:tagHandling="html" xmlns:p3="http://blackbird.io/">
+      <segment state="translated">
+        <source>Importo massimo:</source>
+        <target>Importe máximo:</target>
+      </segment>
+    </unit>
+    <unit id="u7" name="/xliff[1]/file[1]/body[1]/trans-unit[3]/g[1]" p3:tagHandling="html" xmlns:p3="http://blackbird.io/">
+      <segment state="translated">
+        <source>7’258 CHF</source>
+        <target>7.258 CHF</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>
