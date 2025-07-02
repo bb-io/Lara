@@ -41,8 +41,8 @@ public class TranslateActionsTests : TestBase
         {
             File = new FileReference { Name = "test.xliff" },
             GlossaryFile = new FileReference { Name = "Original.tbx" },
-            Instructions = "Translate as much friendly as possible",
-            TargetLanguage = "es",
+            //Instructions = "Translate as much friendly as possible",
+            TargetLanguage = "es-ES",
             //MemoryId= "mem_17PV2mXVbF6J69A2fjWZaq"
         };
 

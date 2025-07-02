@@ -32,7 +32,7 @@
     <unit id="u2" name="/xliff[1]/file[1]/body[1]/trans-unit[1]/#text[2]" p3:tagHandling="html" xmlns:p3="http://blackbird.io/">
       <segment state="translated">
         <source>Benvenuti nel nostro sito web!</source>
-        <target>¡Bienvenidos a nuestra página web!</target>
+        <target>¡Bienvenidos a nuestro sitio web!</target>
       </segment>
     </unit>
     <unit id="u3" name="/xliff[1]/file[1]/body[1]/trans-unit[2]/g[1]/#text[1]" p3:tagHandling="html" xmlns:p3="http://blackbird.io/">
@@ -62,7 +62,7 @@
     <unit id="u7" name="/xliff[1]/file[1]/body[1]/trans-unit[3]/g[1]" p3:tagHandling="html" xmlns:p3="http://blackbird.io/">
       <segment state="translated">
         <source>7’258 CHF</source>
-        <target>7.258 CHF</target>
+        <target>7258 CHF</target>
       </segment>
     </unit>
   </file>
