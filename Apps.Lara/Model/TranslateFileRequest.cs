@@ -35,7 +35,6 @@ namespace Apps.Lara.Model
 
 
         //
-        [DefinitionIgnore]
         public string? OutputFileHandling { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
     }
 }
