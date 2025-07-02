@@ -5,8 +5,20 @@ using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using Blackbird.Filters.Coders;
+using Blackbird.Filters.Enums;
+using Blackbird.Filters.Extensions;
+using Blackbird.Filters.Transformations;
+using Blackbird.Filters.Xliff.Xliff2;
 using RestSharp;
 using System.IO.Compression;
+using System.Text;
+using Blackbird.Applications.SDK.Blueprints;
+using static System.Net.Mime.MediaTypeNames;
+using Blackbird.Applications.Sdk.Common.Files;
+using System.Text.RegularExpressions;
+using Blackbird.Applications.Sdk.Glossaries.Utils.Converters;
+using System.Net.Mime;
 
 namespace Apps.Lara.Actions;
 
@@ -29,10 +41,15 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
 
         if (!string.IsNullOrWhiteSpace(text.ContentType))
             body["content_type"] = text.ContentType!;
-        if (text.Instructions != null && text.Instructions.Any())
-            body["instructions"] = text.Instructions;
+
+        if (!string.IsNullOrWhiteSpace(text.Instructions))
+            body["instructions"] = new[] { text.Instructions! };
+
         if (!string.IsNullOrWhiteSpace(text.Priority))
             body["priority"] = text.Priority!;
+
+        if (!string.IsNullOrWhiteSpace(text.MemoryId))
+            body["adapt_to"] = new[] { text.MemoryId };
 
         request.AddJsonBody(body);
 
@@ -43,6 +60,86 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
             Translation = response.Content
         };
     }
+
+    [BlueprintActionDefinition(BlueprintAction.TranslateFile)]
+    [Action("Translate file", Description = "Translates file")]
+    public async Task<FileResponse> TranslateFile([ActionParameter] TranslateFileRequest file)
+    {
+        using var fileStream = await fileManagementClient.DownloadAsync(file.File);
+        var content = await Transformation.Parse(fileStream);
+
+        var segments = content.GetSegments()
+            .Where(s => !s.IsIgnorbale && s.IsInitial)
+            .ToList();
+        if (!segments.Any())
+            throw new PluginMisconfigurationException("No segments found to translate.");
+
+        var blocks = segments
+            .Select(s => new { text = s.GetSource(), translatable = true })
+            .ToArray();
+
+        var contentType = DetectContentType(file.File.Name);
+
+        var body = new Dictionary<string, object>
+        {
+            ["q"] = blocks,
+            ["target"] = file.TargetLanguage,
+            ["content_type"] = contentType
+        };
+        if (!string.IsNullOrWhiteSpace(file.SourceLanguage))
+            body["source"] = file.SourceLanguage;
+        if (!string.IsNullOrWhiteSpace(file.Priority))
+            body["priority"] = file.Priority;
+        if (!string.IsNullOrWhiteSpace(file.MemoryId))
+            body["adapt_to"] = new[] { file.MemoryId };
+
+        var instructionsList = new List<string>();
+        if (file.GlossaryFile != null)
+        {
+            var allText = string.Join(" ", segments.Select(s => s.GetSource()));
+            var glossaryPrompt = await GetGlossaryPromptPart(file.GlossaryFile, allText, filter: false);
+            if (!string.IsNullOrWhiteSpace(glossaryPrompt))
+                instructionsList.Add(glossaryPrompt);
+        }
+        if (!string.IsNullOrWhiteSpace(file.Instructions))
+            instructionsList.Add(file.Instructions);
+        if (instructionsList.Any())
+            body["instructions"] = instructionsList.ToArray();
+
+        var request = new RestRequest("/translate", Method.Post)
+            .AddJsonBody(body);
+        var response = await Client.ExecuteWithErrorHandling<TranslationTextsResponse>(request);
+
+        var translated = response.Translation.Translation;
+        if (translated == null || !translated.Any())
+            throw new PluginMisconfigurationException("No translated segments received from the server.");
+
+        for (int i = 0; i < segments.Count; i++)
+        {
+            segments[i].SetTarget(translated[i].Text);
+            segments[i].State = SegmentState.Translated;
+        }
+
+        Stream resultStream;
+        string resultName = file.File.Name;
+        if (contentType.Equals("application/xliff+xml", StringComparison.OrdinalIgnoreCase))
+        {
+            resultStream = content.Serialize().ToStream();
+            resultName = Path.ChangeExtension(file.File.Name, ".xliff");
+        }
+        else if (contentType.Equals("text/html", StringComparison.OrdinalIgnoreCase))
+        {
+            resultStream = HtmlContentCoder.Serialize(content.Target()).ToStream();
+        }
+        else
+        {
+            resultStream = content.Target().Serialize().ToStream();
+        }
+
+        var uploaded = await fileManagementClient.UploadAsync(resultStream, contentType, resultName);
+        return new FileResponse { File = uploaded };
+    }
+
 
     [Action("Add translation to memory", Description = "Adds translation to memory")]
     public async Task<MemoryTranslationResponse> AddTranslationToMemory([ActionParameter] MemoryRequest memory, [ActionParameter] LanguageRequest language,
@@ -187,5 +284,54 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
         request.AddParameter(name: "compression", value: "gzip", type: ParameterType.GetOrPost);
 
         return await client.ExecuteWithErrorHandling<MemoryTranslationResponse>(request);
+    }
+
+    private string DetectContentType(string fileName)
+    {
+        var ext = Path.GetExtension(fileName)?.ToLowerInvariant();
+        return ext switch
+        {
+            ".html" or ".htm" => "text/html",
+            ".xlf" or ".xliff" => "application/xliff+xml",
+            _ => "text/plain"
+        };
+    }
+
+
+    protected async Task<string> GetGlossaryPromptPart(FileReference glossary, string sourceContent, bool filter)
+    {
+        if (!glossary.Name.EndsWith(".tbx", StringComparison.OrdinalIgnoreCase))
+        {
+            var extension = Path.GetExtension(glossary.Name);
+            throw new PluginMisconfigurationException($"Glossary file must be in TBX format. But the provided file has {extension} extension.");
+        }
+
+        var glossaryStream = await fileManagementClient.DownloadAsync(glossary);
+        var blackbirdGlossary = await glossaryStream.ConvertFromTbx();
+
+        var glossaryPromptPart = new StringBuilder();
+        glossaryPromptPart.AppendLine();
+        glossaryPromptPart.AppendLine();
+        glossaryPromptPart.AppendLine("Glossary entries (each entry includes terms in different language. Each " +
+                                      "language may have a few synonymous variations which are separated by ;;):");
+
+        var entriesIncluded = false;
+        foreach (var entry in blackbirdGlossary.ConceptEntries)
+        {
+            var allTerms = entry.LanguageSections.SelectMany(x => x.Terms.Select(y => y.Term));
+            if (filter && !allTerms.Any(x => Regex.IsMatch(sourceContent, $@"\b{x}\b", RegexOptions.IgnoreCase))) continue;
+            entriesIncluded = true;
+
+            glossaryPromptPart.AppendLine();
+            glossaryPromptPart.AppendLine("\tEntry:");
+
+            foreach (var section in entry.LanguageSections)
+            {
+                glossaryPromptPart.AppendLine(
+                    $"\t\t{section.LanguageCode}: {string.Join(";; ", section.Terms.Select(term => term.Term))}");
+            }
+        }
+
+        return entriesIncluded ? glossaryPromptPart.ToString() : null;
     }
 }

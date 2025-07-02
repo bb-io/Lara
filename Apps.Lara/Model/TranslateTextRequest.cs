@@ -1,6 +1,8 @@
-﻿using Apps.Lara.Handlers.Static;
+﻿using Apps.Lara.Handlers;
+using Apps.Lara.Handlers.Static;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dictionaries;
+using Blackbird.Applications.Sdk.Common.Dynamic;
 
 namespace Apps.Lara.Model
 {
@@ -14,10 +16,14 @@ namespace Apps.Lara.Model
         public string? ContentType { get; set; }
 
         [Display("Instructions to customize")]
-        public IEnumerable<string?> Instructions { get; set; }
+        public string? Instructions { get; set; }
 
         [Display("Priority")]
         [StaticDataSource(typeof(PriorityDataHandler))]
         public string? Priority { get; set; }
+
+        [Display("Translation memory ID")]
+        [DataSource(typeof(MemoriesDataHandler))]
+        public string? MemoryId { get; set; }
     }
 }

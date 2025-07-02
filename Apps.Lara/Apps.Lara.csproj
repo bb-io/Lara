@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
         <Product>Lara [Beta]</Product>
         <Description>This is a new adaptive translation AI that combines the fluency, reasoning, context handling and instruct capabilities of LLMs</Description>
-        <Version>1.0.2</Version>
+        <Version>1.0.3</Version>
         <AssemblyName>Apps.Lara</AssemblyName>
     </PropertyGroup>
 
@@ -15,8 +15,16 @@
 	</ItemGroup>
 	
     <ItemGroup>
-        <PackageReference Include="Blackbird.Applications.Sdk.Common" Version="2.11.0" />
+        <PackageReference Include="Blackbird.Applications.SDK.Blueprints" Version="0.0.1-rc.9482" />
+        <PackageReference Include="Blackbird.Applications.Sdk.Common" Version="2.13.0-rc.9476" />
+        <PackageReference Include="Blackbird.Applications.SDK.Extensions.FileManagement" Version="1.0.1" />
+        <PackageReference Include="Blackbird.Applications.Sdk.Glossaries.Utils" Version="1.0.2-rc.8500" />
         <PackageReference Include="Blackbird.Applications.Sdk.Utils" Version="1.0.25" />
+        <PackageReference Include="Blackbird.Filters" Version="1.1.4" />
+    </ItemGroup>
+	
+    <ItemGroup>
+      <Folder Include="Polling\Model\" />
     </ItemGroup>
 
 </Project>

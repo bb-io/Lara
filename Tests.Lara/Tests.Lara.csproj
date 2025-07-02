@@ -10,6 +10,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Blackbird.Applications.SDK.Blueprints" Version="0.0.1-rc.9482" />
+    <PackageReference Include="Blackbird.Filters" Version="1.1.4" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.2" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.6.0" />
     <PackageReference Include="MSTest.TestAdapter" Version="3.0.4" />
@@ -28,6 +30,10 @@
     <None Update="appsettings.json.example">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="TestFiles\Output\" />
   </ItemGroup>
 
 </Project>

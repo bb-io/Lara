@@ -23,7 +23,7 @@ public class TranslateActionsTests : TestBase
         {
             Text = "Hello, how are you?",
             ContentType = "text/plain",
-            Instructions = ["Translate as much friendly as possible"],
+            Instructions = "Translate as much friendly as possible",
         };
 
         var response = await action.TranslateText(languageRequest, textRequest);
@@ -33,10 +33,30 @@ public class TranslateActionsTests : TestBase
     }
 
     [TestMethod]
+    public async Task TranslateFile_IsSuccessful()
+    {
+        var action = new TranslateActions(InvocationContext, FileManager);
+
+        var textRequest = new TranslateFileRequest
+        {
+            File = new FileReference { Name = "test.xliff" },
+            GlossaryFile = new FileReference { Name = "Original.tbx" },
+            //Instructions = "Translate as much friendly as possible",
+            TargetLanguage = "es-ES",
+            //MemoryId= "mem_17PV2mXVbF6J69A2fjWZaq"
+        };
+
+        var response = await action.TranslateFile( textRequest);
+
+        var json = System.Text.Json.JsonSerializer.Serialize(response, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        Console.WriteLine(json);
+    }
+
+    [TestMethod]
     public async Task CreateMemory_IsSuccessful()
     {
         var action = new TranslateActions(InvocationContext, FileManager);
-        var response = await action.CreateMemory("New memory 2");
+        var response = await action.CreateMemory("Ceci testing TM");
 
         var json = System.Text.Json.JsonSerializer.Serialize(response, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
         Console.WriteLine(json);
@@ -98,8 +118,8 @@ public class TranslateActionsTests : TestBase
     {
         var action = new TranslateActions(InvocationContext, FileManager);
 
-        var memory = new MemoryRequest { MemoryId = "mem_1Xg3fQLOiUjIfnlWKrTH2A" };
-        var translation = new ImportMemoryRequest { File = new FileReference { Name = "test.tmx" } };
+        var memory = new MemoryRequest { MemoryId = "mem_2u3JUSyjEdRrywFwhxm8YI" };
+        var translation = new ImportMemoryRequest { File = new FileReference { Name = "NewMem-20008141.tmx" } };
 
         var response = await action.ImportMemory(memory, translation);
 
