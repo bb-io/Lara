@@ -112,6 +112,8 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
 
         if (file.OutputFileHandling == null || file.OutputFileHandling == "xliff")
         {
+            content.SourceLanguage = file.SourceLanguage;
+            content.TargetLanguage = file.TargetLanguage;
             var xliffStream = content.Serialize().ToStream();
             var fileName = file.File.Name.EndsWith("xliff") || file.File.Name.EndsWith("xlf") ? file.File.Name : file.File.Name + ".xliff";
             var uploadedFile = await fileManagementClient.UploadAsync(xliffStream, "application/xliff+xml", fileName);
