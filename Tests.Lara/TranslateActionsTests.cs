@@ -70,6 +70,28 @@ public class TranslateActionsTests : TestBase
     }
 
     [TestMethod]
+    public async Task TranslateFile_native_api()
+    {
+        var action = new TranslateActions(InvocationContext, FileManager);
+
+        var textRequest = new TranslateFileRequest
+        {
+            File = new FileReference { Name = "contentful.html", ContentType = "text/html" },
+            //GlossaryFile = new FileReference { Name = "Original.tbx" },
+            //Instructions = "Translate as much friendly as possible",
+            TargetLanguage = "es-ES",
+            //MemoryId= "mem_17PV2mXVbF6J69A2fjWZaq",
+            OutputFileHandling = "original",
+            FileTranslationStrategy = "lara"
+        };
+
+        var response = await action.TranslateFile(textRequest);
+
+        var json = System.Text.Json.JsonSerializer.Serialize(response, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        Console.WriteLine(json);
+    }
+
+    [TestMethod]
     public async Task CreateMemory_IsSuccessful()
     {
         var action = new TranslateActions(InvocationContext, FileManager);
@@ -135,8 +157,8 @@ public class TranslateActionsTests : TestBase
     {
         var action = new TranslateActions(InvocationContext, FileManager);
 
-        var memory = new MemoryRequest { MemoryId = "mem_2u3JUSyjEdRrywFwhxm8YI" };
-        var translation = new ImportMemoryRequest { File = new FileReference { Name = "NewMem-20008141.tmx" } };
+        var memory = new MemoryRequest { MemoryId = "mem_3MrnFflmQIoZSskbNYUwap" };
+        var translation = new ImportMemoryRequest { File = new FileReference { Name = "test.tmx" } };
 
         var response = await action.ImportMemory(memory, translation);
 
