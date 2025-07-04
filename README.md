@@ -26,13 +26,27 @@ You can sign up for a free account at [Lara](https://app.laratranslate.com). 'Ac
 
 ### Translation
 
-- **Translate text**  Translates a text string
-- **Translate**  Translates a file (supports .xliff and .html formats)
-- **Add translation to memory**  Adds a translation to the memory
-- **Delete translation from memory**  Deletes a translation from the memory
-- **Create memory**  Creates a new memory
-- **Import memory** Imports a memory from a TMX file
+- **Translate**  Translate interopability compatible files in Blackbird interoperability mode. Can also be used to translate other file types that Lara supports. If you're only translating text (strings) then use *Translate text* instead. Advanced settings:
+  - **File translation strategy**: Select whether to use Lara's own file processing capabilities or use Blackbird interoperability mode (the latter the the default mode).
+  - **Output file handling**: If using Blackbird's interoperability mode, this determines the format of the output file. The default Blackbird behavior is to convert to XLIFF for future steps. You can change it to output the original file format (if you don't want to continue language operationts after this step).  
+  - **Glossary**: A TBX file that defines a glossary that should be included in the context.
+  - **Instructions to customize**: Any additional prompt to add more context to the translation.
+  - **Priority**: Whether this should be a background or a normal priority process.
+  - **Translation memory ID**: Add (previously imported) translation memories as context to this translation.
+- **Translate text** Translate a single text string. Useful when translating small messages. For larger content and files use *Translate* instead.
 
+### Memory
+
+- **Add translation to memory**  Adds a single translation to the memory.
+- **Delete translation from memory**  Deletes single a translation from the memory.
+- **Create memory**  Creates a new memory.
+- **Import memory** Imports a memory from a TMX file. Make sure you have created a memory (either manually or through Blackbird) to be able to select a memory to import to.
+
+## Example
+
+![1751616148578](image/README/1751616148578.png)
+
+The example above shows a bird that is triggered as soon as an entry is published in Contentful, this entry is then exported and translated through Lara before being imported back into Contentful. The Lara translation also considers existing translation memories as context.
 
 ## Feedback
 

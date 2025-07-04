@@ -20,10 +20,6 @@ namespace Apps.Lara.Model
         [DataSource(typeof(LanguageDataHandler))]
         public string TargetLanguage { get; set; }
 
-        [Display("Content type")]
-        [StaticDataSource(typeof(ContentTypeDataHandler))]
-        public string? ContentType { get; set; }
-
         [Display("Instructions to customize")]
         public string? Instructions { get; set; }
 

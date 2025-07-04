@@ -37,9 +37,6 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
         if (!string.IsNullOrWhiteSpace(input.SourceLanguage))
             body["source"] = input.SourceLanguage!;
 
-        if (!string.IsNullOrWhiteSpace(input.ContentType))
-            body["content_type"] = input.ContentType!;
-
         if (!string.IsNullOrWhiteSpace(input.Instructions))
             body["instructions"] = new[] { input.Instructions! };
 
@@ -128,19 +125,15 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
             segment.State = SegmentState.Translated;
         }
 
-        if (file.OutputFileHandling == null || file.OutputFileHandling == MediaTypes.Xliff)
-        {
-            content.SourceLanguage ??= file.SourceLanguage;
-            content.TargetLanguage ??= file.TargetLanguage;
-            var uploadedFile = await fileManagementClient.UploadAsync(content.Serialize().ToStream(), MediaTypes.Xliff, content.XliffFileName);
-            return new FileResponse { File = uploadedFile };
-        }
-        else
+        if (file.OutputFileHandling == "original")
         {
             var targetContent = content.Target();
-            var uploadedFile = await fileManagementClient.UploadAsync(targetContent.Serialize().ToStream(), targetContent.OriginalMediaType, targetContent.OriginalName);
-            return new FileResponse { File = uploadedFile };
+            return new FileResponse { File = await fileManagementClient.UploadAsync(targetContent.Serialize().ToStream(), targetContent.OriginalMediaType, targetContent.OriginalName) };
         }
+
+        content.SourceLanguage ??= file.SourceLanguage;
+        content.TargetLanguage ??= file.TargetLanguage;
+        return new FileResponse { File = await fileManagementClient.UploadAsync(content.Serialize().ToStream(), MediaTypes.Xliff, content.XliffFileName) };
     }
 
     public async Task<FileResponse> TranslateDocumentUsingLara([ActionParameter] TranslateFileRequest file)

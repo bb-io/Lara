@@ -37,20 +37,6 @@ public class DataHandlerTests : TestBase
     }
 
     [TestMethod]
-    public async Task ContentTypeDataHandler_IssSuccess()
-    {
-        var handler = new ContentTypeDataHandler();
-
-        var response = handler.GetData();
-
-        foreach (var item in response)
-        {
-            Console.WriteLine($"{item.DisplayName} - {item.Value}");
-        }
-        Assert.IsNotNull(response);
-    }
-
-    [TestMethod]
     public async Task PriorityDataHandler_IssSuccess()
     {
         var handler = new PriorityDataHandler();

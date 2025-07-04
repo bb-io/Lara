@@ -16,7 +16,6 @@ public class TranslateActionsTests : TestBase
         var textRequest = new TranslateTextRequest
         {
             Text = "Hello, how are you?",
-            ContentType = "text/plain",
             Instructions = "Translate as much friendly as possible",
             TargetLanguage = "es",
             SourceLanguage = "en"
