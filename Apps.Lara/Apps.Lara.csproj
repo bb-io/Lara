@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
         <Product>Lara [Beta]</Product>
         <Description>This is a new adaptive translation AI that combines the fluency, reasoning, context handling and instruct capabilities of LLMs</Description>
-        <Version>1.0.4</Version>
+        <Version>1.0.5</Version>
         <AssemblyName>Apps.Lara</AssemblyName>
     </PropertyGroup>
 
