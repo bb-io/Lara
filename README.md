@@ -27,7 +27,7 @@ You can sign up for a free account at [Lara](https://app.laratranslate.com). 'Ac
 ### Translation
 
 - **Translate**  Translate interopability compatible files in Blackbird interoperability mode. Can also be used to translate other file types that Lara supports. If you're only translating text (strings) then use *Translate text* instead. Advanced settings:
-  - **File translation strategy**: Select whether to use Lara's own file processing capabilities or use Blackbird interoperability mode (the latter the the default mode).
+  - **File translation strategy**: Select whether to use Lara's own file processing capabilities or use Blackbird interoperability mode (the latter the default mode).
   - **Output file handling**: If using Blackbird's interoperability mode, this determines the format of the output file. The default Blackbird behavior is to convert to XLIFF for future steps. You can change it to output the original file format (if you don't want to continue language operationts after this step).  
   - **Glossary**: A TBX file that defines a glossary that should be included in the context.
   - **Instructions to customize**: Any additional prompt to add more context to the translation.
