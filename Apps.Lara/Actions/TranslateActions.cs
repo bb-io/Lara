@@ -17,12 +17,14 @@ using Blackbird.Applications.Sdk.Glossaries.Utils.Converters;
 using System.Net.Http.Headers;
 using Blackbird.Filters.Constants;
 using DocumentFormat.OpenXml.Spreadsheet;
+using Blackbird.Applications.SDK.Blueprints;
 
 namespace Apps.Lara.Actions;
 
 [ActionList]
 public class TranslateActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : Invocable(invocationContext)
 {
+    [BlueprintActionDefinition(BlueprintAction.TranslateText)]
     [Action("Translate text", Description = "Translates text")]
     public async Task<TranslationContent> TranslateText([ActionParameter] TranslateTextRequest input)
     {
@@ -53,6 +55,7 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
         return response.Content;
     }
 
+    [BlueprintActionDefinition(BlueprintAction.TranslateFile)]
     [Action("Translate", Description = "Translates file")]
     public async Task<FileResponse> TranslateFile([ActionParameter] TranslateFileRequest file)
     {
