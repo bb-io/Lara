@@ -39,5 +39,8 @@ namespace Apps.Lara.Model
 
         [Display("Output file handling", Description = "Determine the format of the output file. The default Blackbird behavior is to convert to XLIFF for future steps."), StaticDataSource(typeof(ProcessFileFormatHandler))]
         public string? OutputFileHandling { get; set; }
+
+        [Display("File translation strategy", Description = "Select whether to use Lara's own file processing capabilities or use Blackbird interoperability mode"), StaticDataSource(typeof(FileTranslationStrategyHandler))]
+        public string? FileTranslationStrategy { get; set; }
     }
 }

@@ -12,7 +12,7 @@ namespace Apps.Lara.Model
     public class OperationContent
     {
         [JsonProperty("id")]
-        [Display("Translation memory ID")]
+        [Display("Import process ID")]
         public string Id { get; set; }
 
         [JsonProperty("begin")]

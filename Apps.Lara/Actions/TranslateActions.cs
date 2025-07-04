@@ -5,7 +5,6 @@ using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
-using Blackbird.Filters.Coders;
 using Blackbird.Filters.Enums;
 using Blackbird.Filters.Extensions;
 using Blackbird.Filters.Transformations;
@@ -15,13 +14,17 @@ using System.Text;
 using Blackbird.Applications.Sdk.Common.Files;
 using System.Text.RegularExpressions;
 using Blackbird.Applications.Sdk.Glossaries.Utils.Converters;
-using System.Net.Mime;
+using System.Net.Http.Headers;
+using Blackbird.Filters.Constants;
+using DocumentFormat.OpenXml.Spreadsheet;
+using Blackbird.Applications.SDK.Blueprints;
 
 namespace Apps.Lara.Actions;
 
 [ActionList]
 public class TranslateActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : Invocable(invocationContext)
 {
+    [BlueprintActionDefinition(BlueprintAction.TranslateText)]
     [Action("Translate text", Description = "Translates text")]
     public async Task<TranslationContent> TranslateText([ActionParameter] TranslateTextRequest input)
     {
@@ -35,9 +38,6 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
 
         if (!string.IsNullOrWhiteSpace(input.SourceLanguage))
             body["source"] = input.SourceLanguage!;
-
-        if (!string.IsNullOrWhiteSpace(input.ContentType))
-            body["content_type"] = input.ContentType!;
 
         if (!string.IsNullOrWhiteSpace(input.Instructions))
             body["instructions"] = new[] { input.Instructions! };
@@ -55,11 +55,29 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
         return response.Content;
     }
 
+    [BlueprintActionDefinition(BlueprintAction.TranslateFile)]
     [Action("Translate", Description = "Translates file")]
     public async Task<FileResponse> TranslateFile([ActionParameter] TranslateFileRequest file)
     {
+        if (file.FileTranslationStrategy == "lara") return await TranslateDocumentUsingLara(file);
+
+        try
+        {
+            return await TranslateFileUsingBlackbird(file);
+        } catch(Exception e)
+        {
+            if (e.Message.Contains("This file format is not supported"))
+            {
+                throw new PluginMisconfigurationException("The file format is not supported by the Blackbird interoperable setting. Try setting the file translation strategy to Lara native.");
+            }
+            throw;
+        }
+    }
+
+    public async Task<FileResponse> TranslateFileUsingBlackbird([ActionParameter] TranslateFileRequest file)
+    {
         using var fileStream = await fileManagementClient.DownloadAsync(file.File);
-        var content = await Transformation.Parse(fileStream);
+        var content = await Transformation.Parse(fileStream, file.File.Name);
         
         async Task<IEnumerable<TranslationSegment>> BatchTranslate(IEnumerable<Segment> batch)
         {
@@ -110,19 +128,86 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
             segment.State = SegmentState.Translated;
         }
 
-        if (file.OutputFileHandling == null || file.OutputFileHandling == "xliff")
+        if (file.OutputFileHandling == "original")
         {
-            var xliffStream = content.Serialize().ToStream();
-            var fileName = file.File.Name.EndsWith("xliff") || file.File.Name.EndsWith("xlf") ? file.File.Name : file.File.Name + ".xliff";
-            var uploadedFile = await fileManagementClient.UploadAsync(xliffStream, "application/xliff+xml", fileName);
-            return new FileResponse { File = uploadedFile };
+            var targetContent = content.Target();
+            return new FileResponse { File = await fileManagementClient.UploadAsync(targetContent.Serialize().ToStream(), targetContent.OriginalMediaType, targetContent.OriginalName) };
         }
-        else
+
+        content.SourceLanguage ??= file.SourceLanguage;
+        content.TargetLanguage ??= file.TargetLanguage;
+        return new FileResponse { File = await fileManagementClient.UploadAsync(content.Serialize().ToStream(), MediaTypes.Xliff, content.XliffFileName) };
+    }
+
+    public async Task<FileResponse> TranslateDocumentUsingLara([ActionParameter] TranslateFileRequest file)
+    {
+        using var fileStream = await fileManagementClient.DownloadAsync(file.File);
+        var content = await Transformation.Parse(fileStream, file.File.Name);
+
+        var presignedUrlrequest = new RestRequest("/documents/upload-url", Method.Get).AddParameter("filename", file.File.Name);
+        var presignedUrlResponse = await Client.ExecuteWithErrorHandling<ContentWrapper<UploadUrlData>>(presignedUrlrequest);
+        presignedUrlResponse.Content.Fields.TryGetValue("key", out var s3Key);
+
+        if (s3Key is null) throw new PluginApplicationException("Invalid S3 response returned from Lara");
+
+        await UploadToS3PresignedUrl(presignedUrlResponse.Content, file.File);
+
+        var body = new Dictionary<string, object>
         {
-            var resultStream = content.Target().Serialize().ToStream();
-            var uploadedFile = await fileManagementClient.UploadAsync(resultStream, file.File.ContentType, file.File.Name);
-            return new FileResponse { File = uploadedFile };
+            ["target"] = file.TargetLanguage,
+            ["s3key"] = s3Key
+        };
+        if (!string.IsNullOrWhiteSpace(file.SourceLanguage))
+            body["source"] = file.SourceLanguage;
+        if (!string.IsNullOrWhiteSpace(file.MemoryId))
+            body["adapt_to"] = new[] { file.MemoryId };
+
+        var postDocumentRequest = new RestRequest("/documents", Method.Post).AddJsonBody(body);
+        var postDocumentResponse = await Client.ExecuteWithErrorHandling<ContentWrapper<Document>>(postDocumentRequest);
+
+        var pollingInterval = 2000;
+        var maxWaitTime = 1000 * 60 * 9; // 9 minutes
+        var start = DateTime.Now;
+
+        while((DateTime.Now - start).TotalMilliseconds < maxWaitTime)
+        {
+            await Task.Delay(pollingInterval);
+
+            var statusRequest = new RestRequest($"/documents/{postDocumentResponse.Content.Id}", Method.Get);
+            var statusResponse = await Client.ExecuteWithErrorHandling<ContentWrapper<Document>>(statusRequest);
+
+            if (statusResponse.Content.Status == DocumentStatus.TRANSLATED) break;
+            if (statusResponse.Content.Status == DocumentStatus.ERROR) throw new PluginApplicationException(statusResponse.Content.ErrorReason);
         }
+
+        var downloadUrlRequest = new RestRequest($"/documents/{postDocumentResponse.Content.Id}/download-url", Method.Get);
+        var downloadUrlResponse = await Client.ExecuteWithErrorHandling<ContentWrapper<UploadUrlData>>(downloadUrlRequest);
+
+        var responseFile = new FileReference(new HttpRequestMessage(HttpMethod.Get, downloadUrlResponse.Content.Url), file.File.Name, file.File.ContentType);
+
+        return new FileResponse
+        {
+            File = responseFile,
+        };
+    }
+
+    public async Task UploadToS3PresignedUrl(UploadUrlData data, FileReference file)
+    {
+        using var fileStream = await fileManagementClient.DownloadAsync(file);
+        using var client = new HttpClient();
+        using var content = new MultipartFormDataContent();
+
+        foreach (var field in data.Fields)
+        {
+            content.Add(new StringContent(field.Value), field.Key);
+        }
+
+        var fileContent = new StreamContent(fileStream);
+        fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse(file.ContentType);
+        content.Add(fileContent, "file", file.Name);
+
+        var response = await client.PostAsync(data.Url, content);
+        response.EnsureSuccessStatusCode();
     }
 
 
