@@ -9,19 +9,17 @@ using Blackbird.Filters.Enums;
 using Blackbird.Filters.Extensions;
 using Blackbird.Filters.Transformations;
 using RestSharp;
-using System.IO.Compression;
-using System.Text;
 using Blackbird.Applications.Sdk.Common.Files;
-using System.Text.RegularExpressions;
-using Blackbird.Applications.Sdk.Glossaries.Utils.Converters;
 using System.Net.Http.Headers;
 using Blackbird.Filters.Constants;
-using DocumentFormat.OpenXml.Spreadsheet;
 using Blackbird.Applications.SDK.Blueprints;
+using Blackbird.Applications.Sdk.Glossaries.Utils.Converters;
+using System.Text.RegularExpressions;
+using System.Text;
 
 namespace Apps.Lara.Actions;
 
-[ActionList]
+[ActionList("Translation")]
 public class TranslateActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : Invocable(invocationContext)
 {
     [BlueprintActionDefinition(BlueprintAction.TranslateText)]
@@ -209,164 +207,6 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
         var response = await client.PostAsync(data.Url, content);
         response.EnsureSuccessStatusCode();
     }
-
-
-    [Action("Add translation to memory", Description = "Adds translation to memory")]
-    public async Task<MemoryTranslationResponse> AddTranslationToMemory([ActionParameter] MemoryRequest memory, [ActionParameter] LanguageRequest language,
-        [ActionParameter] AddTranslationRequest translation)
-    {
-        if (string.IsNullOrWhiteSpace(memory.MemoryId))
-            throw new PluginMisconfigurationException("Memory ID is required. Please check your input and try again");
-        if (string.IsNullOrWhiteSpace(language.SourceLanguage))
-            throw new PluginMisconfigurationException("Source language is required. Please check your input and try again");
-        if (string.IsNullOrWhiteSpace(language.TargetLanguage))
-            throw new PluginMisconfigurationException("Target language is required. Please check your input and try again");
-        if (string.IsNullOrWhiteSpace(translation.Setnence))
-            throw new PluginMisconfigurationException("Sentence is required. Please check your input and try again");
-        if (string.IsNullOrWhiteSpace(translation.Translation))
-            throw new PluginMisconfigurationException("Translation is required. Please check your input and try again");
-
-        var client = new LaraClient(Creds);
-        var request = new RestRequest($"/memories/{memory.MemoryId}/content", Method.Put);
-
-        var body = new Dictionary<string, object>
-        {
-            ["source"] = language.SourceLanguage!,
-            ["target"] = language.TargetLanguage,
-            ["sentence"] = translation.Setnence,
-            ["translation"] = translation.Translation
-        };
-
-        if (!string.IsNullOrWhiteSpace(translation.TranslationId))
-            body["tuid"] = translation.TranslationId!;
-        if (!string.IsNullOrWhiteSpace(translation.SentenceBefore))
-            body["sentence_before"] = translation.SentenceBefore!;
-        if (!string.IsNullOrWhiteSpace(translation.SentenceAfter))
-            body["sentence_after"] = translation.SentenceAfter!;
-
-        request.AddJsonBody(body);
-
-        var response = await client.ExecuteWithErrorHandling<MemoryTranslationResponse>(request);
-
-        return response;
-    }
-
-
-    [Action("Delete translation from memory", Description = "Deletes translation from memory")]
-    public async Task<MemoryTranslationResponse> DeleteTranslation([ActionParameter] MemoryRequest memory, [ActionParameter] LanguageRequest language,
-        [ActionParameter] AddTranslationRequest translation)
-    {
-        if (string.IsNullOrWhiteSpace(memory.MemoryId))
-            throw new PluginMisconfigurationException("Memory ID is required. Please check your input and try again");
-        if (string.IsNullOrWhiteSpace(language.SourceLanguage))
-            throw new PluginMisconfigurationException("Source language is required. Please check your input and try again");
-        if (string.IsNullOrWhiteSpace(language.TargetLanguage))
-            throw new PluginMisconfigurationException("Target language is required. Please check your input and try again");
-        if (string.IsNullOrWhiteSpace(translation.Setnence))
-            throw new PluginMisconfigurationException("Sentence is required. Please check your input and try again");
-        if (string.IsNullOrWhiteSpace(translation.Translation))
-            throw new PluginMisconfigurationException("Translation is required. Please check your input and try again");
-
-        var client = new LaraClient(Creds);
-        var request = new RestRequest($"/memories/{memory.MemoryId}/content", Method.Delete);
-
-        var body = new Dictionary<string, object>
-        {
-            ["source"] = language.SourceLanguage!,
-            ["target"] = language.TargetLanguage,
-            ["sentence"] = translation.Setnence,
-            ["translation"] = translation.Translation
-        };
-
-        if (!string.IsNullOrWhiteSpace(translation.TranslationId))
-            body["tuid"] = translation.TranslationId!;
-        if (!string.IsNullOrWhiteSpace(translation.SentenceBefore))
-            body["sentence_before"] = translation.SentenceBefore!;
-        if (!string.IsNullOrWhiteSpace(translation.SentenceAfter))
-            body["sentence_after"] = translation.SentenceAfter!;
-
-        request.AddJsonBody(body);
-
-        var response = await client.ExecuteWithErrorHandling<MemoryTranslationResponse>(request);
-
-        return response;
-    }
-
-    [Action("Create memory", Description = "Creates memory")]
-    public async Task<MemoryResponseDto> CreateMemory([ActionParameter][Display("Name")] string name)
-    {
-        var client = new LaraClient(Creds);
-        var request = new RestRequest("/memories", Method.Post);
-
-        var body = new Dictionary<string, object>
-        {
-            ["name"] = name
-        };
-        request.AddJsonBody(body);
-
-        var response = await client.ExecuteWithErrorHandling<MemoryResponseDto>(request);
-
-        return response;
-    }
-
-    [Action("Import memory", Description = "Imports memory from file")]
-    public async Task<MemoryTranslationResponse> ImportMemory([ActionParameter] MemoryRequest memory,
-        [ActionParameter] ImportMemoryRequest input)
-    {
-        if (string.IsNullOrWhiteSpace(memory.MemoryId))
-            throw new PluginMisconfigurationException("Memory ID is required. Please check your input and try again");
-        if (input.File == null)
-            throw new PluginMisconfigurationException("TMX file is required. Please check your input and try again");
-
-        var client = new LaraClient(Creds);
-        var request = new RestRequest($"/memories/{memory.MemoryId}/import", Method.Post)
-        {
-            AlwaysMultipartFormData = true
-        };
-
-        await using var rawStream = await fileManagementClient.DownloadAsync(input.File);
-        byte[] fileBytes;
-
-        bool isGzipped = input.File.Name.EndsWith(".gz", StringComparison.OrdinalIgnoreCase);
-
-        if (isGzipped)
-        {
-            await using var msRaw = new MemoryStream();
-            await rawStream.CopyToAsync(msRaw);
-            fileBytes = msRaw.ToArray();
-        }
-        else
-        {
-            await using var msRaw = new MemoryStream();
-            await rawStream.CopyToAsync(msRaw);
-            byte[] rawBytes = msRaw.ToArray();
-
-            await using var msGzip = new MemoryStream();
-            using (var gzip = new GZipStream(msGzip, CompressionLevel.Optimal, leaveOpen: true))
-            {
-                await gzip.WriteAsync(rawBytes, 0, rawBytes.Length);
-            }
-            fileBytes = msGzip.ToArray();
-        }
-        var fileName = isGzipped ? input.File.Name : $"{input.File.Name}.gz";
-
-        request.AddFile(name: "tmx", bytes: fileBytes, fileName: fileName, contentType: "application/gzip");
-        request.AddParameter(name: "compression", value: "gzip", type: ParameterType.GetOrPost);
-
-        return await client.ExecuteWithErrorHandling<MemoryTranslationResponse>(request);
-    }
-
-    private string DetectContentType(string fileName)
-    {
-        var ext = Path.GetExtension(fileName)?.ToLowerInvariant();
-        return ext switch
-        {
-            ".html" or ".htm" => "text/html",
-            ".xlf" or ".xliff" => "application/xliff+xml",
-            _ => "text/plain"
-        };
-    }
-
 
     protected async Task<string> GetGlossaryPromptPart(FileReference glossary, string sourceContent, bool filter)
     {

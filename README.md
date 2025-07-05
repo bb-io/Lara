@@ -35,7 +35,7 @@ You can sign up for a free account at [Lara](https://app.laratranslate.com). 'Ac
   - **Translation memory ID**: Add (previously imported) translation memories as context to this translation.
 - **Translate text** Translate a single text string. Useful when translating small messages. For larger content and files use *Translate* instead.
 
-### Memory
+### Memoies
 
 - **Add translation to memory**  Adds a single translation to the memory.
 - **Delete translation from memory**  Deletes single a translation from the memory.
