@@ -2,22 +2,17 @@
 using Apps.Lara.Model;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Exceptions;
-using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using RestSharp;
 using System.IO.Compression;
-using System.Text.RegularExpressions;
-using System.Text;
-using Blackbird.Applications.Sdk.Glossaries.Utils.Converters;
 
 namespace Apps.Lara.Actions;
 
 [ActionList("Memories")]
 public class MemoryActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : Invocable(invocationContext)
 {
-
     [Action("Add translation to memory", Description = "Adds translation to memory")]
     public async Task<MemoryTranslationResponse> AddTranslationToMemory([ActionParameter] MemoryRequest memory, [ActionParameter] LanguageRequest language,
         [ActionParameter] AddTranslationRequest translation)
@@ -57,7 +52,6 @@ public class MemoryActions(InvocationContext invocationContext, IFileManagementC
 
         return response;
     }
-
 
     [Action("Delete translation from memory", Description = "Deletes translation from memory")]
     public async Task<MemoryTranslationResponse> DeleteTranslation([ActionParameter] MemoryRequest memory, [ActionParameter] LanguageRequest language,
@@ -162,5 +156,4 @@ public class MemoryActions(InvocationContext invocationContext, IFileManagementC
 
         return await client.ExecuteWithErrorHandling<MemoryTranslationResponse>(request);
     }
-
 }
