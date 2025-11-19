@@ -62,13 +62,9 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
         try
         {
             return await TranslateFileUsingBlackbird(file);
-        } catch(Exception e)
+        } catch(NotImplementedException e)
         {
-            if (e.Message.Contains("This file format is not supported"))
-            {
-                throw new PluginMisconfigurationException("The file format is not supported by the Blackbird interoperable setting. Try setting the file translation strategy to Lara native.");
-            }
-            throw;
+            throw new PluginMisconfigurationException("The file format is not supported by the Blackbird interoperable setting. Try setting the file translation strategy to Lara native.");
         }
     }
 
@@ -77,12 +73,12 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
         using var fileStream = await fileManagementClient.DownloadAsync(file.File);
         var content = await Transformation.Parse(fileStream, file.File.Name);
         
-        async Task<IEnumerable<TranslationSegment>> BatchTranslate(IEnumerable<Segment> batch)
+        async Task<IEnumerable<TranslationSegment>> BatchTranslate(IEnumerable<(Unit Unit, Segment Segment)> batch)
         {
             var instructionsList = new List<string>();
             if (file.GlossaryFile != null)
             {
-                var allText = string.Join(" ", batch.Select(s => s.GetSource()));
+                var allText = string.Join(" ", batch.Select(s => s.Segment.GetSource()));
                 var glossaryPrompt = await GetGlossaryPromptPart(file.GlossaryFile, allText, filter: false);
                 if (!string.IsNullOrWhiteSpace(glossaryPrompt))
                     instructionsList.Add(glossaryPrompt);
@@ -90,8 +86,10 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
             if (!string.IsNullOrWhiteSpace(file.Instructions))
                 instructionsList.Add(file.Instructions);
 
+            instructionsList.AddRange(content.Notes.Select(x => x.Text));
+
             var blocks = batch
-                .Select(s => new { text = s.GetSource(), translatable = true })
+                .Select(s => new { text = s.Segment.GetSource(), translatable = true })
                 .ToArray();
 
             var body = new Dictionary<string, object>
@@ -115,15 +113,20 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
             return response.Translation.Translation;
         }
 
-        var segmentTranslations = await content
-            .GetSegments()
-            .Where(x => !x.IsIgnorbale && x.IsInitial)
-            .Batch(100).Process(BatchTranslate);
+        var unitTranslations = await content
+            .GetUnits()
+            .Batch(100, x => !x.IsIgnorbale && x.IsInitial).Process(BatchTranslate);
 
-        foreach (var (segment, translation) in segmentTranslations)
+        foreach(var (unit, results) in unitTranslations)
         {
-            segment.SetTarget(translation.Text);
-            segment.State = SegmentState.Translated;
+            foreach (var (segment, result) in results)
+            {
+                segment.SetTarget(result.Text);
+                segment.State = SegmentState.Translated;
+            }
+
+            unit.Provenance.Translation.Tool = "Lara";
+            unit.Provenance.Translation.ToolReference = "https://laratranslate.com";
         }
 
         if (file.OutputFileHandling == "original")
