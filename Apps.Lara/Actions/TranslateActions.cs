@@ -3,19 +3,20 @@ using Apps.Lara.Model;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Exceptions;
+using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using Blackbird.Applications.Sdk.Glossaries.Utils.Converters;
+using Blackbird.Applications.SDK.Blueprints;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using Blackbird.Filters.Constants;
 using Blackbird.Filters.Enums;
 using Blackbird.Filters.Extensions;
 using Blackbird.Filters.Transformations;
 using RestSharp;
-using Blackbird.Applications.Sdk.Common.Files;
+using System.IO;
 using System.Net.Http.Headers;
-using Blackbird.Filters.Constants;
-using Blackbird.Applications.SDK.Blueprints;
-using Blackbird.Applications.Sdk.Glossaries.Utils.Converters;
-using System.Text.RegularExpressions;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Apps.Lara.Actions;
 
@@ -71,8 +72,12 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
     public async Task<FileResponse> TranslateFileUsingBlackbird([ActionParameter] TranslateFileRequest file)
     {
         using var fileStream = await fileManagementClient.DownloadAsync(file.File);
-        var content = await Transformation.Parse(fileStream, file.File.Name);
-        
+        var loadResult = Transformation.Load(fileStream, file.File.Name, file.File.ContentType);
+        if (!loadResult.Success)
+            throw new PluginMisconfigurationException(loadResult.Error);
+
+        var content = loadResult.Value;
+
         async Task<IEnumerable<TranslationSegment>> BatchTranslate(IEnumerable<(Unit Unit, Segment Segment)> batch)
         {
             var instructionsList = new List<string>();
@@ -131,19 +136,34 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
 
         if (file.OutputFileHandling == "original")
         {
-            var targetContent = content.Target();
-            return new FileResponse { File = await fileManagementClient.UploadAsync(targetContent.Serialize().ToStream(), targetContent.OriginalMediaType, targetContent.OriginalName) };
+            var targetContentResult = content.Target();
+            if (!targetContentResult.Success)
+                throw new PluginMisconfigurationException(targetContentResult.Error);
+            var targetContent = targetContentResult.Value;
+            return new FileResponse
+            {
+                File = await fileManagementClient.UploadAsync(
+                targetContent.ToStream(),
+                targetContent.OriginalMediaType,
+                targetContent.OriginalName)
+            };
         }
 
         content.SourceLanguage ??= file.SourceLanguage;
         content.TargetLanguage ??= file.TargetLanguage;
-        return new FileResponse { File = await fileManagementClient.UploadAsync(content.Serialize().ToStream(), MediaTypes.Xliff, content.XliffFileName) };
+        return new FileResponse
+        {
+            File = await fileManagementClient.UploadAsync(
+                    content.ToStream(),
+                    MediaTypes.Xliff2,
+                    content.BilingualFileName)
+        };
     }
 
     public async Task<FileResponse> TranslateDocumentUsingLara([ActionParameter] TranslateFileRequest file)
     {
         using var fileStream = await fileManagementClient.DownloadAsync(file.File);
-        var content = await Transformation.Parse(fileStream, file.File.Name);
+        //var content = await Transformation.Parse(fileStream, file.File.Name);
 
         var presignedUrlrequest = new RestRequest("/documents/upload-url", Method.Get).AddParameter("filename", file.File.Name);
         var presignedUrlResponse = await Client.ExecuteWithErrorHandling<ContentWrapper<UploadUrlData>>(presignedUrlrequest);
