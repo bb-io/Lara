@@ -17,6 +17,7 @@ using System.IO;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 
 namespace Apps.Lara.Actions;
 
@@ -69,14 +70,14 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
         }
     }
 
-    public async Task<FileResponse> TranslateFileUsingBlackbird([ActionParameter] TranslateFileRequest file)
+    private async Task<FileResponse> TranslateFileUsingBlackbird([ActionParameter] TranslateFileRequest file)
     {
-        using var fileStream = await fileManagementClient.DownloadAsync(file.File);
+        await using var fileStream = await fileManagementClient.DownloadAsync(file.File);
         var loadResult = Transformation.Load(fileStream, file.File.Name, file.File.ContentType);
         if (!loadResult.Success)
             throw new PluginMisconfigurationException(loadResult.Error);
 
-        var content = loadResult.Value;
+        var transformation = loadResult.Value;
 
         async Task<IEnumerable<TranslationSegment>> BatchTranslate(IEnumerable<(Unit Unit, Segment Segment)> batch)
         {
@@ -91,7 +92,7 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
             if (!string.IsNullOrWhiteSpace(file.Instructions))
                 instructionsList.Add(file.Instructions);
 
-            instructionsList.AddRange(content.Notes.Select(x => x.Text));
+            instructionsList.AddRange(transformation.Notes.Select(x => x.Text));
 
             var blocks = batch
                 .Select(s => new { text = s.Segment.GetSource(), translatable = true })
@@ -118,9 +119,9 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
             return response.Translation.Translation;
         }
 
-        var unitTranslations = await content
+        var unitTranslations = await transformation
             .GetUnits()
-            .Batch(100, x => !x.IsIgnorbale && x.IsInitial).Process(BatchTranslate);
+            .Batch(100, x => !x.IsIgnorbale && x.IsInitial && !string.IsNullOrEmpty(x.GetSource())).Process(BatchTranslate);
 
         foreach(var (unit, results) in unitTranslations)
         {
@@ -136,7 +137,7 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
 
         if (file.OutputFileHandling == "original")
         {
-            var targetContentResult = content.Target();
+            var targetContentResult = transformation.Target();
             if (!targetContentResult.Success)
                 throw new PluginMisconfigurationException(targetContentResult.Error);
             var targetContent = targetContentResult.Value;
@@ -149,14 +150,14 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
             };
         }
 
-        content.SourceLanguage ??= file.SourceLanguage;
-        content.TargetLanguage ??= file.TargetLanguage;
+        transformation.SourceLanguage ??= file.SourceLanguage;
+        transformation.TargetLanguage ??= file.TargetLanguage;
         return new FileResponse
         {
             File = await fileManagementClient.UploadAsync(
-                    content.ToStream(),
+                    transformation.ToStream(),
                     MediaTypes.Xliff2,
-                    content.BilingualFileName)
+                    transformation.BilingualFileName)
         };
     }
 
