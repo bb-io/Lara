@@ -32,7 +32,7 @@ You can sign up for a free account at [Lara](https://app.laratranslate.com). 'Ac
   - **Glossary**: A TBX file that defines a glossary that should be included in the context.
   - **Instructions to customize**: Any additional prompt to add more context to the translation.
   - **Priority**: Whether this should be a background or a normal priority process.
-  - **Translation memory ID**: Add (previously imported) translation memories as context to this translation.
+  - **Translation memory IDs**: Add one or more (previously imported) translation memories as context to this translation.
 - **Translate text** Translate a single text string. Useful when translating small messages. For larger content and files use *Translate* instead.
 
 ### Memories

@@ -35,10 +35,7 @@ public class TranslateActionsTests : TestBase
         var textRequest = new TranslateFileRequest
         {
             File = new FileReference { Name = "contentful.html" },
-            //GlossaryFile = new FileReference { Name = "Original.tbx" },
-            //Instructions = "Translate as much friendly as possible",
             TargetLanguage = "es-ES",
-            //MemoryId= "mem_17PV2mXVbF6J69A2fjWZaq"
         };
 
         var response = await action.TranslateFile( textRequest);
@@ -55,10 +52,7 @@ public class TranslateActionsTests : TestBase
         var textRequest = new TranslateFileRequest
         {
             File = new FileReference { Name = "contentful.html" },
-            //GlossaryFile = new FileReference { Name = "Original.tbx" },
-            //Instructions = "Translate as much friendly as possible",
             TargetLanguage = "es-ES",
-            //MemoryId= "mem_17PV2mXVbF6J69A2fjWZaq",
             OutputFileHandling = "original",
         };
 
@@ -76,10 +70,7 @@ public class TranslateActionsTests : TestBase
         var textRequest = new TranslateFileRequest
         {
             File = new FileReference { Name = "contentful.html", ContentType = "text/html" },
-            //GlossaryFile = new FileReference { Name = "Original.tbx" },
-            //Instructions = "Translate as much friendly as possible",
             TargetLanguage = "es-ES",
-            //MemoryId= "mem_17PV2mXVbF6J69A2fjWZaq",
             OutputFileHandling = "original",
             FileTranslationStrategy = "lara"
         };
