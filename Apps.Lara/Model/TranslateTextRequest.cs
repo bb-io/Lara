@@ -27,10 +27,8 @@ namespace Apps.Lara.Model
         [StaticDataSource(typeof(PriorityDataHandler))]
         public string? Priority { get; set; }
 
-        [Display("Translation memory ID")]
+        [Display("Translation memory IDs")]
         [DataSource(typeof(MemoriesDataHandler))]
-        public string? MemoryId { get; set; }
-
-
+        public IEnumerable<string>? MemoryIds { get; set; }
     }
 }

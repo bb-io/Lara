@@ -1,4 +1,5 @@
 using Apps.Lara.Api;
+using Apps.Lara.Extensions;
 using Apps.Lara.Model;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
@@ -13,11 +14,9 @@ using Blackbird.Filters.Enums;
 using Blackbird.Filters.Extensions;
 using Blackbird.Filters.Transformations;
 using RestSharp;
-using System.IO;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
-using Newtonsoft.Json;
 
 namespace Apps.Lara.Actions;
 
@@ -45,8 +44,7 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
         if (!string.IsNullOrWhiteSpace(input.Priority))
             body["priority"] = input.Priority!;
 
-        if (!string.IsNullOrWhiteSpace(input.MemoryId))
-            body["adapt_to"] = new[] { input.MemoryId };
+        body.AddTranslationMemories(input.MemoryIds);
 
         request.AddJsonBody(body);
 
@@ -64,7 +62,8 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
         try
         {
             return await TranslateFileUsingBlackbird(file);
-        } catch(NotImplementedException e)
+        }
+        catch (NotImplementedException)
         {
             throw new PluginMisconfigurationException("The file format is not supported by the Blackbird interoperable setting. Try setting the file translation strategy to Lara native.");
         }
@@ -108,9 +107,8 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
                 body["source"] = file.SourceLanguage;
             if (!string.IsNullOrWhiteSpace(file.Priority))
                 body["priority"] = file.Priority;
-            if (!string.IsNullOrWhiteSpace(file.MemoryId))
-                body["adapt_to"] = new[] { file.MemoryId };
-            if(instructionsList.Any())
+            body.AddTranslationMemories(file.MemoryIds);
+            if (instructionsList.Any())
                 body["instructions"] = instructionsList.ToArray();
 
             var request = new RestRequest("/translate", Method.Post).AddJsonBody(body);
@@ -163,9 +161,6 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
 
     public async Task<FileResponse> TranslateDocumentUsingLara([ActionParameter] TranslateFileRequest file)
     {
-        using var fileStream = await fileManagementClient.DownloadAsync(file.File);
-        //var content = await Transformation.Parse(fileStream, file.File.Name);
-
         var presignedUrlrequest = new RestRequest("/documents/upload-url", Method.Get).AddParameter("filename", file.File.Name);
         var presignedUrlResponse = await Client.ExecuteWithErrorHandling<ContentWrapper<UploadUrlData>>(presignedUrlrequest);
         presignedUrlResponse.Content.Fields.TryGetValue("key", out var s3Key);
@@ -181,14 +176,13 @@ public class TranslateActions(InvocationContext invocationContext, IFileManageme
         };
         if (!string.IsNullOrWhiteSpace(file.SourceLanguage))
             body["source"] = file.SourceLanguage;
-        if (!string.IsNullOrWhiteSpace(file.MemoryId))
-            body["adapt_to"] = new[] { file.MemoryId };
+        body.AddTranslationMemories(file.MemoryIds);
 
         var postDocumentRequest = new RestRequest("/documents", Method.Post).AddJsonBody(body);
         var postDocumentResponse = await Client.ExecuteWithErrorHandling<ContentWrapper<Document>>(postDocumentRequest);
 
         var pollingInterval = 2000;
-        var maxWaitTime = 1000 * 60 * 9; // 9 minutes
+        var maxWaitTime = TimeSpan.FromMinutes(9).TotalMilliseconds;
         var start = DateTime.Now;
 
         while((DateTime.Now - start).TotalMilliseconds < maxWaitTime)

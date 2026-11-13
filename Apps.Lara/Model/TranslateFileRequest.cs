@@ -33,9 +33,9 @@ namespace Apps.Lara.Model
         [DataSource(typeof(LanguageDataHandler))]
         public string TargetLanguage { get; set; }
 
-        [Display("Translation memory ID")]
+        [Display("Translation memory IDs")]
         [DataSource(typeof(MemoriesDataHandler))]
-        public string? MemoryId { get; set; }
+        public IEnumerable<string>? MemoryIds { get; set; }
 
         [Display("Output file handling", Description = "Determine the format of the output file. The default Blackbird behavior is to convert to XLIFF for future steps."), StaticDataSource(typeof(ProcessFileFormatHandler))]
         public string? OutputFileHandling { get; set; }
